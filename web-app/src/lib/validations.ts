@@ -1,30 +1,15 @@
-export type AuthFormValues = {
-  email: string;
-  password: string;
-  name?: string;
-};
+import { z } from "zod";
 
-export function isValidEmail(email: string) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
+export const signupSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.string().email("Invalid email"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
+});
 
-export function validateAuthForm(values: AuthFormValues) {
-  const errors: string[] = [];
+export const loginSchema = z.object({
+  email: z.string().email("Invalid email"),
+  password: z.string().min(1, "Password is required"),
+});
 
-  if (!isValidEmail(values.email)) {
-    errors.push("Please provide a valid email address.");
-  }
-
-  if (values.password.trim().length < 8) {
-    errors.push("Password must be at least 8 characters long.");
-  }
-
-  if (values.name !== undefined && values.name.trim().length === 0) {
-    errors.push("Name cannot be empty.");
-  }
-
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
-}
+export type SignupInput = z.infer<typeof signupSchema>;
+export type LoginInput = z.infer<typeof loginSchema>;

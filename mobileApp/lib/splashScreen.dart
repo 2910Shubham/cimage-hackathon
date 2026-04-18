@@ -1,411 +1,376 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
-class VirAshatSplashScreen extends StatefulWidget {
-  const VirAshatSplashScreen({Key? key}) : super(key: key);
+// ═══════════════════════════════════════════════════════════════════════════
+// CIMAGE HACKATHON 2026 — SPLASH SCREEN
+// Pure vector + text. No image assets required.
+// Drop-in replacement: change context.go('/webview') to your route.
+// ═══════════════════════════════════════════════════════════════════════════
+
+class CimageHackathonSplash extends StatefulWidget {
+  const CimageHackathonSplash({Key? key}) : super(key: key);
 
   @override
-  State<VirAshatSplashScreen> createState() => _VirAshatSplashScreenState();
+  State<CimageHackathonSplash> createState() => _CimageHackathonSplashState();
 }
 
-class _VirAshatSplashScreenState extends State<VirAshatSplashScreen>
+class _CimageHackathonSplashState extends State<CimageHackathonSplash>
     with TickerProviderStateMixin {
-  // Logo animation
-  late AnimationController _logoController;
-  late Animation<double> _logoFade;
-  late Animation<double> _logoScale;
 
-  // Text animation
-  late AnimationController _textController;
+  // ── Brand palette ──────────────────────────────────────────────────────────
+  static const Color _bg         = Color(0xFF07080F);
+  static const Color _violet     = Color(0xFF7C3AED);
+  static const Color _violetLt   = Color(0xFFA78BFA);
+  static const Color _cyan       = Color(0xFF06B6D4);
+  static const Color _white      = Color(0xFFFFFFFF);
+
+  // ── Animation controllers ─────────────────────────────────────────────────
+  late AnimationController _orbCtrl;     // bg orbs breathe
+  late AnimationController _hexCtrl;     // hex decorations draw-on
+  late AnimationController _iconCtrl;    // </> icon enter
+  late AnimationController _ringCtrl;    // sweep ring (infinite)
+  late AnimationController _glowCtrl;    // inner glow pulse (infinite)
+  late AnimationController _titleCtrl;   // CIMAGE title
+  late AnimationController _badgeCtrl;   // badges + tagline
+  late AnimationController _loaderCtrl;  // bottom dots (infinite)
+
+  // orbs
+  late Animation<double> _orbScale;
+  late Animation<double> _orbOpacity;
+
+  // hex
+  late Animation<double> _hexProgress;
+
+  // icon
+  late Animation<double> _iconFade;
+  late Animation<double> _iconScale;
+
+  // ring + glow
+  late Animation<double> _ringAngle;
+  late Animation<double> _glowPulse;
+
+  // title
   late Animation<double> _titleFade;
-  late Animation<Offset> _titleSlide;
-  late Animation<double> _subtitleFade;
-  late Animation<Offset> _subtitleSlide;
+  late Animation<double> _titleScale;
 
-  // Tagline animation
-  late AnimationController _taglineController;
+  // badges + tagline
+  late Animation<double> _badgeFade;
+  late Animation<Offset>  _badgeSlide;
   late Animation<double> _taglineFade;
-
-  // Spin animation (logo rotation during scale-in)
-  late AnimationController _spinController;
-  late Animation<double> _spinAnimation;
-
-  // Shimmer / ring pulse animation
-  late AnimationController _pulseController;
-  late Animation<double> _pulseScale;
-  late Animation<double> _pulseOpacity;
-
-  // Bottom loader
-  late AnimationController _loaderController;
 
   @override
   void initState() {
     super.initState();
 
-    // Make status bar transparent
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-      ),
-    );
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ));
 
-    // ── Logo ──────────────────────────────────────────────
-    _logoController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
-      vsync: this,
-    );
-    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: const Interval(0.0, 0.35, curve: Curves.easeOut)),
-    );
-    _logoScale = Tween<double>(begin: 0.18, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: const Interval(0.0, 1.0, curve: Curves.easeOutCubic)),
-    );
+    // ── Orb breathe ─────────────────────────────────────────────────────────
+    _orbCtrl = AnimationController(
+      duration: const Duration(milliseconds: 3400), vsync: this,
+    )..repeat(reverse: true);
+    _orbScale   = Tween<double>(begin: 0.88, end: 1.12).animate(
+      CurvedAnimation(parent: _orbCtrl, curve: Curves.easeInOut));
+    _orbOpacity = Tween<double>(begin: 0.28, end: 0.48).animate(
+      CurvedAnimation(parent: _orbCtrl, curve: Curves.easeInOut));
 
-    // ── Text (title + subtitle) ───────────────────────────
-    _textController = AnimationController(
-      duration: const Duration(milliseconds: 700),
-      vsync: this,
+    // ── Hex draw-on ─────────────────────────────────────────────────────────
+    _hexCtrl = AnimationController(
+      duration: const Duration(milliseconds: 1600), vsync: this,
     );
-    _titleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: const Interval(0.0, 0.65, curve: Curves.easeOut)),
-    );
-    _titleSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic),
-    );
-    _subtitleFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: const Interval(0.35, 1.0, curve: Curves.easeOut)),
-    );
-    _subtitleSlide = Tween<Offset>(begin: const Offset(0, 0.4), end: Offset.zero).animate(
-      CurvedAnimation(parent: _textController, curve: const Interval(0.35, 1.0, curve: Curves.easeOutCubic)),
-    );
+    _hexProgress = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _hexCtrl, curve: Curves.easeOut));
 
-    // ── Tagline ───────────────────────────────────────────
-    _taglineController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
+    // ── Icon enter ──────────────────────────────────────────────────────────
+    _iconCtrl = AnimationController(
+      duration: const Duration(milliseconds: 800), vsync: this,
     );
+    _iconFade  = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _iconCtrl, curve: Curves.easeOut));
+    _iconScale = Tween<double>(begin: 0.60, end: 1.0).animate(
+      CurvedAnimation(parent: _iconCtrl, curve: Curves.easeOutBack));
+
+    // ── Sweep ring (infinite) ────────────────────────────────────────────────
+    _ringCtrl = AnimationController(
+      duration: const Duration(milliseconds: 2600), vsync: this,
+    )..repeat();
+    _ringAngle = Tween<double>(begin: 0.0, end: 1.0).animate(_ringCtrl);
+
+    // ── Glow pulse (infinite) ────────────────────────────────────────────────
+    _glowCtrl = AnimationController(
+      duration: const Duration(milliseconds: 2000), vsync: this,
+    )..repeat(reverse: true);
+    _glowPulse = Tween<double>(begin: 0.55, end: 1.0).animate(
+      CurvedAnimation(parent: _glowCtrl, curve: Curves.easeInOut));
+
+    // ── Title enter ──────────────────────────────────────────────────────────
+    _titleCtrl = AnimationController(
+      duration: const Duration(milliseconds: 700), vsync: this,
+    );
+    _titleFade  = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _titleCtrl, curve: Curves.easeOut));
+    _titleScale = Tween<double>(begin: 0.80, end: 1.0).animate(
+      CurvedAnimation(parent: _titleCtrl, curve: Curves.easeOutCubic));
+
+    // ── Badges + tagline ─────────────────────────────────────────────────────
+    _badgeCtrl = AnimationController(
+      duration: const Duration(milliseconds: 700), vsync: this,
+    );
+    _badgeFade  = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _badgeCtrl,
+          curve: const Interval(0.0, 0.65, curve: Curves.easeOut)));
+    _badgeSlide = Tween<Offset>(
+      begin: const Offset(0, 0.5), end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _badgeCtrl, curve: Curves.easeOutCubic));
     _taglineFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _taglineController, curve: Curves.easeOut),
-    );
+      CurvedAnimation(parent: _badgeCtrl,
+          curve: const Interval(0.4, 1.0, curve: Curves.easeOut)));
 
-    // ── Spin (synced with logo scale) ─────────────────────
-    _spinController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
-      vsync: this,
-    );
-    _spinAnimation = Tween<double>(begin: 0.0, end: 2.0).animate(
-      CurvedAnimation(parent: _spinController, curve: Curves.easeOutCubic),
-    );
-
-    // ── Pulse ring ────────────────────────────────────────
-    _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 2200),
-      vsync: this,
-    )..repeat();
-    _pulseScale = Tween<double>(begin: 1.0, end: 1.35).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
-    );
-    _pulseOpacity = Tween<double>(begin: 0.28, end: 0.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeOut),
-    );
-
-    // ── Bottom loader ─────────────────────────────────────
-    _loaderController = AnimationController(
-      duration: const Duration(milliseconds: 1400),
-      vsync: this,
+    // ── Bottom loader ────────────────────────────────────────────────────────
+    _loaderCtrl = AnimationController(
+      duration: const Duration(milliseconds: 1200), vsync: this,
     )..repeat();
 
-    // ── Sequence ──────────────────────────────────────────
-    Future.delayed(const Duration(milliseconds: 120), () {
-      _logoController.forward();
-      _spinController.forward();
-    });
-    Future.delayed(const Duration(milliseconds: 1400), () {
-      _textController.forward();
-    });
-    Future.delayed(const Duration(milliseconds: 1900), () {
-      _taglineController.forward();
-    });
+    // ── Sequence ─────────────────────────────────────────────────────────────
+    //  100ms → hex decorations start drawing
+    //  600ms → </> icon enters
+    // 1200ms → CIMAGE title enters
+    // 1800ms → badges + tagline enter
+    // 3800ms → navigate
 
-    // Navigate
-    Future.delayed(const Duration(milliseconds: 3600), () {
-      if (mounted) context.go('/webview');
-    });
+    Future.delayed(const Duration(milliseconds: 100),  () { if (mounted) _hexCtrl.forward(); });
+    Future.delayed(const Duration(milliseconds: 600),  () { if (mounted) _iconCtrl.forward(); });
+    Future.delayed(const Duration(milliseconds: 1200), () { if (mounted) _titleCtrl.forward(); });
+    Future.delayed(const Duration(milliseconds: 1800), () { if (mounted) _badgeCtrl.forward(); });
+    Future.delayed(const Duration(milliseconds: 3800), () { if (mounted) context.go('/webview'); });
   }
 
   @override
   void dispose() {
-    _logoController.dispose();
-    _spinController.dispose();
-    _textController.dispose();
-    _taglineController.dispose();
-    _pulseController.dispose();
-    _loaderController.dispose();
+    _orbCtrl.dispose();
+    _hexCtrl.dispose();
+    _iconCtrl.dispose();
+    _ringCtrl.dispose();
+    _glowCtrl.dispose();
+    _titleCtrl.dispose();
+    _badgeCtrl.dispose();
+    _loaderCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0F1E),
+      backgroundColor: _bg,
       body: Stack(
         children: [
-          // ── Deep radial glow behind logo ─────────────────
-          Positioned.fill(
-            child: AnimatedBuilder(
-              animation: _logoFade,
-              builder: (_, __) => Opacity(
-                opacity: (_logoFade.value * 0.55).clamp(0.0, 1.0),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    gradient: RadialGradient(
-                      center: Alignment(0, -0.12),
-                      radius: 0.72,
-                      colors: [
-                        Color(0x5500C49A), // teal glow
-                        Color(0x221A7CCC), // blue glow
-                        Colors.transparent,
-                      ],
-                      stops: [0.0, 0.45, 1.0],
-                    ),
-                  ),
-                ),
+
+          // ── 1. Breathing background orbs ────────────────────────────────
+          AnimatedBuilder(
+            animation: _orbCtrl,
+            builder: (_, __) => CustomPaint(
+              size: size,
+              painter: _OrbPainter(
+                scale:   _orbScale.value,
+                opacity: _orbOpacity.value,
               ),
             ),
           ),
 
-          // ── Subtle grid pattern ───────────────────────────
-          Positioned.fill(
-            child: CustomPaint(painter: _GridPainter()),
-          ),
+          // ── 2. Static dot grid ───────────────────────────────────────────
+          const Positioned.fill(child: _DotGrid()),
 
-          // ── Main content ──────────────────────────────────
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Logo with pulse ring ──────────────────
-                AnimatedBuilder(
-                  animation: Listenable.merge([_logoController, _pulseController, _spinController]),
-                  builder: (_, __) {
-                    return FadeTransition(
-                      opacity: _logoFade,
-                      child: ScaleTransition(
-                        scale: _logoScale,
-                        child: SizedBox(
-                          width: 148,
-                          height: 148,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // Outer pulse ring
-                              Opacity(
-                                opacity: _pulseOpacity.value,
-                                child: Transform.scale(
-                                  scale: _pulseScale.value,
-                                  child: Container(
-                                    width: 148,
-                                    height: 148,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: const Color(0xFF00C49A),
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              // Logo glass card with spinning logo inside
-                              Container(
-                                width: 112,
-                                height: 112,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: const Color(0xFF111827),
-                                  border: Border.all(
-                                    color: const Color(0xFF1E2D45),
-                                    width: 1.5,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: const Color(0xFF00C49A).withOpacity(0.22),
-                                      blurRadius: 32,
-                                      spreadRadius: 2,
-                                    ),
-                                    BoxShadow(
-                                      color: const Color(0xFF1A7CCC).withOpacity(0.18),
-                                      blurRadius: 48,
-                                      spreadRadius: 4,
-                                    ),
-                                    const BoxShadow(
-                                      color: Color(0x44000000),
-                                      blurRadius: 20,
-                                      offset: Offset(0, 8),
-                                    ),
-                                  ],
-                                ),
-                                child: ClipOval(
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    // Spin the logo image itself (not the circle)
-                                    child: RotationTransition(
-                                      turns: _spinAnimation,
-                                      child: Image.asset(
-                                        'lib/BiharSHayata LOG.png',
-                                        fit: BoxFit.contain,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 32),
-
-                // ── App name ──────────────────────────────
-                FadeTransition(
-                  opacity: _titleFade,
-                  child: SlideTransition(
-                    position: _titleSlide,
-                    child: Column(
-                      children: [
-                        ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [
-                              Color(0xFFFFFFFF),
-                              Color(0xFFB8D4F0),
-                            ],
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                          ).createShader(bounds),
-                          child: const Text(
-                            'Bihar Sahayata',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                              letterSpacing: 0.6,
-                              height: 1.1,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        // Subtitle badge
-                        FadeTransition(
-                          opacity: _subtitleFade,
-                          child: SlideTransition(
-                            position: _subtitleSlide,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: const Color(0xFF00C49A).withOpacity(0.35),
-                                  width: 1,
-                                ),
-                                color: const Color(0xFF00C49A).withOpacity(0.08),
-                              ),
-                              child: const Text(
-                                'Emergency Response Platform',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF00C49A),
-                                  letterSpacing: 1.1,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // ── Tagline ───────────────────────────────
-                FadeTransition(
-                  opacity: _taglineFade,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 48),
-                    child: Text(
-                      'Intelligent Disaster Coordination\nwhen every second matters',
-                      style: TextStyle(
-                        fontSize: 13.5,
-                        height: 1.55,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.white.withOpacity(0.42),
-                        letterSpacing: 0.2,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              ],
+          // ── 3. Hex decorations ───────────────────────────────────────────
+          AnimatedBuilder(
+            animation: _hexCtrl,
+            builder: (_, __) => CustomPaint(
+              size: size,
+              painter: _HexDecorPainter(progress: _hexProgress.value),
             ),
           ),
 
-          // ── Bottom: powered by + dots loader ─────────────
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 32),
-                child: FadeTransition(
-                  opacity: _taglineFade,
-                  child: Column(
-                    children: [
-                      // Animated dots loader
-                      AnimatedBuilder(
-                        animation: _loaderController,
-                        builder: (_, __) {
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(3, (i) {
-                              final phase = (_loaderController.value - i * 0.18).clamp(0.0, 1.0);
-                              final opacity = (phase < 0.5
-                                      ? phase * 2
-                                      : (1.0 - phase) * 2)
-                                  .clamp(0.25, 1.0);
-                              return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 3.5),
-                                width: 5,
-                                height: 5,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: const Color(0xFF00C49A).withOpacity(opacity),
-                                ),
-                              );
-                            }),
-                          );
-                        },
+          // ── 4. Main content ──────────────────────────────────────────────
+          SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+
+                  // ── </> Icon ────────────────────────────────────────────
+                  AnimatedBuilder(
+                    animation: Listenable.merge([
+                      _iconCtrl, _ringCtrl, _glowCtrl,
+                    ]),
+                    builder: (_, __) => FadeTransition(
+                      opacity: _iconFade,
+                      child: ScaleTransition(
+                        scale: _iconScale,
+                        child: SizedBox(
+                          width: 144,
+                          height: 144,
+                          child: CustomPaint(
+                            painter: _CodeIconPainter(
+                              ringAngle: _ringAngle.value,
+                              glow:      _glowPulse.value,
+                            ),
+                          ),
+                        ),
                       ),
+                    ),
+                  ),
 
+                  const SizedBox(height: 40),
+
+                  // ── CIMAGE ───────────────────────────────────────────────
+                  FadeTransition(
+                    opacity: _titleFade,
+                    child: ScaleTransition(
+                      scale: _titleScale,
+                      child: ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          colors: [_violetLt, _white, _cyan],
+                          stops: [0.0, 0.5, 1.0],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                        ).createShader(bounds),
+                        child: const Text(
+                          'CIMAGE',
+                          style: TextStyle(
+                            fontSize: 54,
+                            fontWeight: FontWeight.w900,
+                            color: _white,
+                            letterSpacing: 12,
+                            height: 1.0,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // ── Divider line ─────────────────────────────────────────
+                  FadeTransition(
+                    opacity: _titleFade,
+                    child: Container(
+                      width: 220,
+                      height: 1,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            _violet.withOpacity(0.7),
+                            _cyan.withOpacity(0.7),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── HACKATHON 2026 badge ─────────────────────────────────
+                  FadeTransition(
+                    opacity: _badgeFade,
+                    child: SlideTransition(
+                      position: _badgeSlide,
+                      child: Column(
+                        children: [
+                          // Main badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 7),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(
+                                color: _violet.withOpacity(0.45),
+                                width: 1,
+                              ),
+                              gradient: LinearGradient(
+                                colors: [
+                                  _violet.withOpacity(0.14),
+                                  _cyan.withOpacity(0.08),
+                                ],
+                              ),
+                            ),
+                            child: const Text(
+                              'HACKATHON  2026',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                color: _violetLt,
+                                letterSpacing: 4.5,
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Category pills
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              _Pill(label: 'WEB', color: _violet),
+                              SizedBox(width: 10),
+                              _Pill(label: 'APP', color: _cyan),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Tagline
+                          FadeTransition(
+                            opacity: _taglineFade,
+                            child: Text(
+                              'Code  ·  Innovate  ·  Get Hired',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                                color: _white.withOpacity(0.35),
+                                letterSpacing: 2.0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── 5. Bottom: dots loader + venue ──────────────────────────────
+          Positioned(
+            bottom: 0, left: 0, right: 0,
+            child: SafeArea(
+              child: FadeTransition(
+                opacity: _taglineFade,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 30),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedBuilder(
+                        animation: _loaderCtrl,
+                        builder: (_, __) => _DotsLoader(
+                          value: _loaderCtrl.value,
+                        ),
+                      ),
                       const SizedBox(height: 16),
-
-                      // Powered by
                       Text(
-                        'Government of Bihar  ·  Disaster Management Dept.',
+                        'CIMAGE Professional College  ·  Patna, Bihar',
                         style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.white.withOpacity(0.25),
-                          letterSpacing: 0.5,
-                          fontWeight: FontWeight.w400,
+                          fontSize: 10.5,
+                          color: _white.withOpacity(0.20),
+                          letterSpacing: 0.8,
                         ),
                       ),
                     ],
@@ -414,29 +379,321 @@ class _VirAshatSplashScreenState extends State<VirAshatSplashScreen>
               ),
             ),
           ),
+
         ],
       ),
     );
   }
 }
 
-// ── Subtle dot-grid background painter ──────────────────────
-class _GridPainter extends CustomPainter {
+// ═══════════════════════════════════════════════════════════════════════════
+// SMALL WIDGETS
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _Pill extends StatelessWidget {
+  const _Pill({required this.label, required this.color});
+  final String label;
+  final Color  color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        color: color.withOpacity(0.11),
+        border: Border.all(color: color.withOpacity(0.35), width: 0.8),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          color: color,
+          letterSpacing: 2.5,
+        ),
+      ),
+    );
+  }
+}
+
+class _DotsLoader extends StatelessWidget {
+  const _DotsLoader({required this.value});
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(5, (i) {
+        final phase = ((value - i * 0.16) % 1.0).clamp(0.0, 1.0);
+        final opacity = (phase < 0.5 ? phase * 2 : (1.0 - phase) * 2)
+            .clamp(0.12, 1.0);
+        final isViolet = i.isEven;
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: 4,
+          height: 4,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: (isViolet
+                    ? const Color(0xFF7C3AED)
+                    : const Color(0xFF06B6D4))
+                .withOpacity(opacity),
+          ),
+        );
+      }),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PAINTERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Background orbs ──────────────────────────────────────────────────────────
+class _OrbPainter extends CustomPainter {
+  const _OrbPainter({required this.scale, required this.opacity});
+  final double scale;
+  final double opacity;
+
   @override
   void paint(Canvas canvas, Size size) {
-    const spacing = 28.0;
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+
+    canvas.drawCircle(
+      Offset(cx - 90, cy - 170),
+      130 * scale,
+      Paint()
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 95)
+        ..color = const Color(0xFF7C3AED).withOpacity(opacity * 0.9),
+    );
+
+    canvas.drawCircle(
+      Offset(cx + 100, cy + 190),
+      110 * scale,
+      Paint()
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 100)
+        ..color = const Color(0xFF06B6D4).withOpacity(opacity * 0.6),
+    );
+
+    // subtle center glow
+    canvas.drawCircle(
+      Offset(cx, cy),
+      60 * scale,
+      Paint()
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 60)
+        ..color = const Color(0xFF7C3AED).withOpacity(opacity * 0.15),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_OrbPainter old) =>
+      old.scale != scale || old.opacity != opacity;
+}
+
+// ── Dot grid ─────────────────────────────────────────────────────────────────
+class _DotGrid extends StatelessWidget {
+  const _DotGrid();
+  @override
+  Widget build(BuildContext context) => CustomPaint(
+        painter: _DotGridPainter(),
+        child: const SizedBox.expand(),
+      );
+}
+
+class _DotGridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const spacing = 26.0;
     final paint = Paint()
       ..color = const Color(0x0DFFFFFF)
-      ..strokeWidth = 1
       ..style = PaintingStyle.fill;
-
     for (double x = spacing; x < size.width; x += spacing) {
       for (double y = spacing; y < size.height; y += spacing) {
-        canvas.drawCircle(Offset(x, y), 1.0, paint);
+        canvas.drawCircle(Offset(x, y), 0.85, paint);
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter _) => false;
+}
+
+// ── Hex decorations ───────────────────────────────────────────────────────────
+class _HexDecorPainter extends CustomPainter {
+  const _HexDecorPainter({required this.progress});
+  final double progress;
+
+  void _hex(Canvas canvas, Offset c, double r, Paint p) {
+    if (progress <= 0) return;
+    final path = Path();
+    for (int i = 0; i < 6; i++) {
+      final a = math.pi / 180 * (60 * i - 30);
+      final pt = Offset(c.dx + r * math.cos(a), c.dy + r * math.sin(a));
+      i == 0 ? path.moveTo(pt.dx, pt.dy) : path.lineTo(pt.dx, pt.dy);
+    }
+    path.close();
+    canvas.drawPath(path, p);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+
+    final pv = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.7
+      ..color = const Color(0xFF7C3AED).withOpacity(0.09 * progress);
+    final pc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.5
+      ..color = const Color(0xFF06B6D4).withOpacity(0.07 * progress);
+
+    _hex(canvas, Offset(cx - 145, cy - 210), 78, pv);
+    _hex(canvas, Offset(cx + 155, cy - 175), 52, pv);
+    _hex(canvas, Offset(cx + 125, cy + 230), 68, pc);
+    _hex(canvas, Offset(cx - 125, cy + 195), 46, pc);
+    _hex(canvas, Offset(cx - 40,  cy - 300), 32, pv);
+    _hex(canvas, Offset(cx + 55,  cy + 305), 26, pc);
+  }
+
+  @override
+  bool shouldRepaint(_HexDecorPainter old) => old.progress != progress;
+}
+
+// ── </> Code icon ─────────────────────────────────────────────────────────────
+class _CodeIconPainter extends CustomPainter {
+  const _CodeIconPainter({required this.ringAngle, required this.glow});
+  final double ringAngle;
+  final double glow;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width  / 2;
+    final cy = size.height / 2;
+    final r  = size.width  / 2 - 5;
+
+    // ── Outer glow ────────────────────────────────────────────────────────
+    canvas.drawCircle(
+      Offset(cx, cy), r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 20
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16)
+        ..color = const Color(0xFF7C3AED).withOpacity(0.20 * glow),
+    );
+
+    // ── Background fill ───────────────────────────────────────────────────
+    canvas.drawCircle(
+      Offset(cx, cy), r,
+      Paint()..color = const Color(0xFF0D0D1A),
+    );
+
+    // ── Dim track ─────────────────────────────────────────────────────────
+    canvas.drawCircle(
+      Offset(cx, cy), r,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5
+        ..color = const Color(0xFF7C3AED).withOpacity(0.13),
+    );
+
+    // ── Animated sweep arc ────────────────────────────────────────────────
+    final arcRect = Rect.fromCircle(center: Offset(cx, cy), radius: r);
+    canvas.drawArc(
+      arcRect,
+      ringAngle * 2 * math.pi - math.pi / 2,
+      math.pi * 1.15,
+      false,
+      Paint()
+        ..style      = PaintingStyle.stroke
+        ..strokeWidth = 2.5
+        ..strokeCap  = StrokeCap.round
+        ..shader     = SweepGradient(
+          colors: [
+            const Color(0xFF06B6D4),
+            const Color(0xFFA78BFA),
+            const Color(0xFF7C3AED),
+            const Color(0xFF06B6D4),
+          ],
+          transform: GradientRotation(ringAngle * 2 * math.pi),
+        ).createShader(arcRect),
+    );
+
+    // ── Dot riding the arc ────────────────────────────────────────────────
+    final dotAngle = ringAngle * 2 * math.pi - math.pi / 2;
+    canvas.drawCircle(
+      Offset(cx + r * math.cos(dotAngle), cy + r * math.sin(dotAngle)),
+      4,
+      Paint()..color = const Color(0xFF06B6D4),
+    );
+
+    // ── Inner ring accent ─────────────────────────────────────────────────
+    canvas.drawCircle(
+      Offset(cx, cy), r - 12,
+      Paint()
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.5
+        ..color = const Color(0xFF7C3AED).withOpacity(0.08),
+    );
+
+    // ── < left bracket ────────────────────────────────────────────────────
+    final bPaint = Paint()
+      ..style      = PaintingStyle.stroke
+      ..strokeWidth = 4.0
+      ..strokeCap  = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..color      = const Color(0xFFA78BFA);
+
+    canvas.drawPath(
+      Path()
+        ..moveTo(cx - 18, cy - 20)
+        ..lineTo(cx - 36, cy)
+        ..lineTo(cx - 18, cy + 20),
+      bPaint,
+    );
+
+    // ── > right bracket ───────────────────────────────────────────────────
+    canvas.drawPath(
+      Path()
+        ..moveTo(cx + 18, cy - 20)
+        ..lineTo(cx + 36, cy)
+        ..lineTo(cx + 18, cy + 20),
+      bPaint,
+    );
+
+    // ── / slash ───────────────────────────────────────────────────────────
+    canvas.drawLine(
+      Offset(cx + 9, cy - 22),
+      Offset(cx - 9, cy + 22),
+      Paint()
+        ..style      = PaintingStyle.stroke
+        ..strokeWidth = 3.5
+        ..strokeCap  = StrokeCap.round
+        ..color      = const Color(0xFF06B6D4),
+    );
+
+    // ── Corner accent dots ────────────────────────────────────────────────
+    for (int i = 0; i < 4; i++) {
+      final a  = ringAngle * 2 * math.pi + i * math.pi / 2;
+      final dx = cx + r * math.cos(a);
+      final dy = cy + r * math.sin(a);
+      canvas.drawCircle(
+        Offset(dx, dy),
+        i == 0 ? 3.5 : 1.6,
+        Paint()
+          ..color = (i == 0
+              ? const Color(0xFF06B6D4)
+              : const Color(0xFFA78BFA))
+              .withOpacity(i == 0 ? 1.0 : 0.45),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CodeIconPainter old) =>
+      old.ringAngle != ringAngle || old.glow != glow;
 }
